@@ -1,9 +1,6 @@
 # PyCharm Project Folder
 .idea/
 
-# Test Folder
-test/
-
 # Log Files
 admin.log
 
@@ -12,3 +9,11 @@ token
 
 # Userdata files
 userdata.json
+
+# Pycache
+__pycache__
+
+# additional
+test.html
+test.py
+test/
