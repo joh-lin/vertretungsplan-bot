@@ -41,7 +41,7 @@ def send_plan(username, chat: Chat, new_plan=True, message: Message = None, date
         for row in range(len(day)):  # for every lesson
             if day[row] != "---":  # if day not empty
                 msg += f'\n{row + 1}  '
-                msg += f"{day[row].split(' ')[1].split('-')[0].rjust(3)} "
+                msg += f"{day[row].split(' ')[1].rjust(7)} "
                 msg += f"{day[row].split(' ')[2].ljust(4)} "
                 msg += f"{day[row].split(' ')[3]} "
 
