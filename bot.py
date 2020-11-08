@@ -1,3 +1,8 @@
+# Vertretungsplan Bot
+# by Johannes L.
+
+
+
 import json
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ParseMode, Message, ForceReply, Bot, Chat, \
     ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
