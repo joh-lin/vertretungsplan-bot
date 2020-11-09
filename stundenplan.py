@@ -44,7 +44,6 @@ class Stundenplan:
             post = session.post("https://selbstlernportal.de/html/planinfo/planinfo_start.php?ug=lev-llg",
                                 data=search_payload)
             if name[1] != 0:
-                print("two name download---")
                 post = session.get(f"https://selbstlernportal.de/html/planinfo/planinfo_start.php?ug=lev-llg&wochewahl=A&dbidx={name[1]}",)
         return post.content
 

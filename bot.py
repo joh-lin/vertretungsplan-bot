@@ -1,8 +1,3 @@
-# Vertretungsplan Bot
-# by Johannes L.
-
-
-
 import json
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ParseMode, Message, ForceReply, Bot, Chat, \
     ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
@@ -23,14 +18,24 @@ ADMINS = ["johanneslin"]
 
 
 def plan(update: Update, context: CallbackContext):
-    send_plan(update.message.from_user.username, update.effective_chat, new_plan=True)
+    logging.debug("/plan")
+    send_plan(update.message.from_user.id, update.effective_chat, new_plan=True)
 
 
+<<<<<<< HEAD
 def send_plan(username, chat: Chat, new_plan=True, message: Message = None, date: datetime = datetime.today()):
     if date.weekday() == 5:
         date += timedelta(days=2)
     elif date.weekday() == 6:
     	 date += timedelta(days=1)
+=======
+def send_plan(userid: str, chat: Chat, new_plan=True, message: Message = None, date: datetime = datetime.today()):
+    logging.debug("/send_plan")
+    if date.weekday() == 5:
+        date += timedelta(days=2)
+    elif date.weekday() == 6:
+        date += timedelta(days=1)
+>>>>>>> 4b75172950e5feed8423247ed535f1ec2e6da681
 
     def date_to_name(_date):
         return ("Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag")[date.weekday()]
@@ -41,7 +46,7 @@ def send_plan(username, chat: Chat, new_plan=True, message: Message = None, date
         for row in range(len(day)):  # for every lesson
             if day[row] != "---":  # if day not empty
                 msg += f'\n{row + 1}  '
-                msg += f"{day[row].split(' ')[1].rjust(7)} "
+                msg += f"{day[row].split(' ')[1].split('-')[0].rjust(3)} "
                 msg += f"{day[row].split(' ')[2].ljust(4)} "
                 msg += f"{day[row].split(' ')[3]} "
 
@@ -63,7 +68,7 @@ def send_plan(username, chat: Chat, new_plan=True, message: Message = None, date
         msg += "```"
         return msg
 
-    name = load_userdata()[username][0]
+    name = load_userdata()[userid][0]
     if name == "":
         message.reply_text("Bitte gib mir die Login-Daten für deinen Stundenplan. (Nachname)",
                            reply_markup=ForceReply())
@@ -92,37 +97,44 @@ def send_plan(username, chat: Chat, new_plan=True, message: Message = None, date
     ]])
     if new_plan:
         chat.send_message(new_message, reply_markup=reply_markup, parse_mode=ParseMode.MARKDOWN_V2)
-        add_admin_log(f"Sent plan to @{username}, date={date.strftime('%d-%m-%y')}.")
+        add_admin_log(f"Sent plan to {userid}, date={date.strftime('%d-%m-%y')}.")
     else:
         message.edit_text(new_message, reply_markup=reply_markup, parse_mode=ParseMode.MARKDOWN_V2)
-        add_admin_log(f"Sent plan to @{username}, date={date.strftime('%d-%m-%y')}.")
+        add_admin_log(f"Sent plan to {userid}, date={date.strftime('%d-%m-%y')}.")
 
 
 def start(update: Update, context: CallbackContext):
+    logging.debug("/start")
     userdata = load_userdata()
-    username = update.effective_user.username
-    if username in userdata:
-        userdata[username][1] = update.effective_chat.id
+    userid = str(update.effective_user.id)
+    if userid in userdata:
+        if update.effective_chat.username:
+            userdata[userid][1] = update.effective_chat.username
+            print("userdata[userid][1]")
+        else:
+            userdata[userid][1] = None
+            print("no username")
     else:
-        add_admin_log(f"New user: username='@{username}', chat_id='{update.effective_chat.id}'.")
-        userdata[username] = ["", update.effective_chat.id]
+        add_admin_log(f"New user: username='{userid}', chat_id='{update.effective_chat.id}'.")
+        userdata[userid] = ["", update.effective_chat.id]
     save_userdata(userdata)
     change_name(update, context)
 
 
 def change_name(update: Update, context: CallbackContext):
-    username = update.effective_user.username
+    logging.debug("/change_name")
+    userid = str(update.effective_user.id)
     userdata = load_userdata()
 
     # check if user already has a login
-    if username in userdata and userdata[username][0] != "":  # login available
+    if userid in userdata and userdata[userid][0] != "":  # login available
         reply_markup = InlineKeyboardMarkup([[
             InlineKeyboardButton("ändern", callback_data='change_login')
         ]])
-        update.message.reply_text(f"Dein aktueller Login ist: {userdata[username][0]}", reply_markup=reply_markup)
+        update.message.reply_text(f"Dein aktueller Login ist: {userdata[userid][0]}", reply_markup=reply_markup)
 
     else:  # no login available
-        userdata[username] = ["", update.effective_chat.id]
+        userdata[userid] = ["", update.effective_chat.id]
         update.message.reply_text(f"Du hast mir noch keine Login-Daten angegeben.")
         save_userdata(userdata)
         update.message.reply_text("Bitte gib mir die Login-Daten für deinen Stundenplan. (Nachname)",
@@ -130,10 +142,11 @@ def change_name(update: Update, context: CallbackContext):
 
 
 def message_update(update: Update, context: CallbackContext):
+    logging.debug("/message_update")
     userdata = load_userdata()
-    username = update.effective_user.username
-    add_admin_log(f"Received message from @{username}: \"{update.message.text}\"")
-    if username in userdata and userdata[username][0] == "":
+    userid = str(update.effective_user.id)
+    add_admin_log(f"Received message from {userid}: \"{update.message.text}\"")
+    if userid in userdata and userdata[userid][0] == "":
         name = update.message.text.split(" ")[0].lower()
         # check if valid
         valid = True
@@ -162,12 +175,12 @@ def message_update(update: Update, context: CallbackContext):
                                       reply_markup=reply_markup)
 
         elif check == [name]:
-            userdata[username][0] = [name, 0]
+            userdata[userid][0] = [name, 0]
             save_userdata(userdata)
-            add_admin_log(f"Name for @{username} set to '{[name, 0]}'.")
+            add_admin_log(f"Name for {userid} set to '{[name, 0]}'.")
             update.message.reply_text(f"Dein Name wurde als \"{name}\" gespeichert.\n"
                                       f"Du kannst ihn jederzeit mit /name ändern.")
-            send_plan(username, update.effective_chat, new_plan=True)
+            send_plan(userid, update.effective_chat, new_plan=True)
         else:
             raise ValueError(f"Name {name} was not handled check={check}")
 
@@ -184,33 +197,34 @@ def load_userdata():
 
 
 def button(update: Update, context: CallbackContext):
+    logging.debug("/button")
     query = update.callback_query
     query.answer()
     userdata = load_userdata()
-    username = query.from_user.username
+    userid = str(query.from_user.id)
 
     # check which button was pressed
     if query.data == "change_login":
-        userdata[username][0] = ""
+        userdata[userid][0] = ""
         save_userdata(userdata)
         query.message.reply_text("Bitte gib mir die Login-Daten für deinen Stundenplan. (Nachname)",
                                  reply_markup=ForceReply())
     elif query.data[:4] == "plan":
         if len(query.data) == 4:  # new plan
-            send_plan(query.from_user.username, query.message.chat, new_plan=True)
+            send_plan(str(query.from_user.id), query.message.chat, new_plan=True)
         else:  # edit plan
             new_date = datetime.strptime(query.data.split(" ")[1], "%d-%m-%y")
-            send_plan(query.from_user.username, query.message.chat, new_plan=False, message=query.message,
+            send_plan(str(query.from_user.id), query.message.chat, new_plan=False, message=query.message,
                       date=new_date)
     elif query.data[:4] == "name":
         print(query.data)
         name = (query.data.split(" ")[1], "".join(query.data.split(" ")[2]))
-        userdata[username][0] = name
+        userdata[userid][0] = name
         save_userdata(userdata)
-        add_admin_log(f"Name for @{username} set to '{name}'.")
+        add_admin_log(f"Name for {userid} set to '{name}'.")
         update.effective_chat.send_message(f"Dein Name wurde als \"{name[0]}\" gespeichert.\n"
-                                  f"Du kannst ihn jederzeit mit /name ändern.")
-        send_plan(username, update.effective_chat, new_plan=True)
+                                           f"Du kannst ihn jederzeit mit /name ändern.")
+        send_plan(userid, update.effective_chat, new_plan=True)
 
 
 def author(update: Update, context: CallbackContext):
@@ -232,7 +246,7 @@ def add_admin_log(*msg):
 
 
 def admin_help(update: Update, context: CallbackContext):
-    if update.effective_user.username not in ADMINS: return
+    if update.effective_user.id not in ADMINS: return
     text = """Admin Commands:
     /admin_help - Displays this help message.
     /admin_get_users - Get a list of all users using this bot.
@@ -243,8 +257,8 @@ def admin_help(update: Update, context: CallbackContext):
 
 
 def admin_manual_update(update: Update, context: CallbackContext):
-    if update.effective_user.username not in ADMINS: return
-    add_admin_log(f"Manual update performed by @{update.effective_user.username}.")
+    if update.effective_user.id not in ADMINS: return
+    add_admin_log(f"Manual update performed by {update.effective_user.id}.")
     vplan = Vertretungsplan()
     vplan.update()
     vplan.save_to_file()
@@ -252,17 +266,17 @@ def admin_manual_update(update: Update, context: CallbackContext):
 
 
 def admin_get_users(update: Update, context: CallbackContext):
-    if update.effective_user.username not in ADMINS: return
+    if update.effective_user.id not in ADMINS: return
     userdata = load_userdata()
     msg = ""
     for user in userdata:
-        msg += f"@{user} - '{userdata[user][0]}'\n"
+        msg += f"{user} - '{userdata[user][0]}'\n"
     update.message.reply_text(msg)
 
 
 def admin_send_log(update: Update, context: CallbackContext):
-    if update.effective_user.username not in ADMINS: return
-    add_admin_log(f"Admin log sent to @{update.effective_user.username}.")
+    if update.effective_user.id not in ADMINS: return
+    add_admin_log(f"Admin log sent to {update.effective_user.id}.")
     with open("admin.log", "r") as f:
         admin_log = f.read().split("\n")
 
@@ -300,18 +314,18 @@ def check_for_updates(context: CallbackContext):
 
     # update time table
     userdata = load_userdata()
-    for user in userdata:  # check for every user
-        if userdata[user][0] != "":  # if user has a name
-            splan = Stundenplan(userdata[user][0])
+    for userid in userdata:  # check for every user
+        if userdata[userid][0] != "":  # if user has a name
+            splan = Stundenplan(userdata[userid][0])
             splan.update()
             splan.save_to_file()
             # check substitution plan
             vplan_old_filtered = vplan_old.get_filtered(splan)
             vplan_new_filtered = vplan_new.get_filtered(splan)
             if vplan_old_filtered != vplan_new_filtered:  # substitution plan changed
-                add_admin_log(f"Plan changed for user='@{user}', name='{userdata[user][0]}' -> Sending plan.")
-                context.bot.send_message(userdata[user][1], "Dein Vertretungsplan hat sich geändert.")
-                send_plan(user, context.bot.get_chat(userdata[user][1]), new_plan=True)
+                add_admin_log(f"Plan changed for user='{userid}', name='{userdata[userid][0]}' -> Sending plan.")
+                context.bot.send_message(userid, "Dein Vertretungsplan hat sich geändert.")
+                send_plan(userid, context.bot.get_chat(userdata[userid][1]), new_plan=True)
 
 
 def main():
@@ -334,7 +348,7 @@ def main():
     dispatcher.add_handler(MessageHandler(Filters.text & (~Filters.command), message_update))
     dispatcher.add_handler(CallbackQueryHandler(button))
 
-    update_job = job_queue.run_repeating(check_for_updates, 5*60)
+    update_job = job_queue.run_repeating(check_for_updates, 5 * 60)
 
     updater.start_polling()
     add_admin_log("Bot has been started.")
