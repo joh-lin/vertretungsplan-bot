@@ -16,7 +16,7 @@ ARROW_RIGHT = emojize(":arrow_forward:", use_aliases=True)
 EMOJI_NEW = emojize(":new:", use_aliases=True)
 EMOJI_SAD = emojize(":confused:", use_aliases=True)
 
-ADMINS = ["johanneslin"]
+ADMINS = ["641346534"]
 
 
 def plan(update: Update, context: CallbackContext):
@@ -240,7 +240,7 @@ def add_admin_log(*msg):
 
 
 def admin_help(update: Update, context: CallbackContext):
-    if update.effective_user.id not in ADMINS: return
+    if str(update.effective_user.id) not in ADMINS: return
     text = """Admin Commands:
     /admin_help - Displays this help message.
     /admin_get_users - Get a list of all users using this bot.
@@ -251,7 +251,7 @@ def admin_help(update: Update, context: CallbackContext):
 
 
 def admin_manual_update(update: Update, context: CallbackContext):
-    if update.effective_user.id not in ADMINS: return
+    if str(update.effective_user.id) not in ADMINS: return
     add_admin_log(f"Manual update performed by {update.effective_user.id}.")
     vplan = Vertretungsplan()
     vplan.update()
@@ -260,7 +260,7 @@ def admin_manual_update(update: Update, context: CallbackContext):
 
 
 def admin_get_users(update: Update, context: CallbackContext):
-    if update.effective_user.id not in ADMINS: return
+    if str(update.effective_user.id) not in ADMINS: return
     userdata = load_userdata()
     msg = ""
     for user in userdata:
@@ -269,7 +269,7 @@ def admin_get_users(update: Update, context: CallbackContext):
 
 
 def admin_send_log(update: Update, context: CallbackContext):
-    if update.effective_user.id not in ADMINS: return
+    if str(update.effective_user.id) not in ADMINS: return
     add_admin_log(f"Admin log sent to {update.effective_user.id}.")
     with open("admin.log", "r") as f:
         admin_log = f.read().split("\n")
@@ -350,7 +350,7 @@ def main():
 
 
 if __name__ == "__main__":
-    if len(sys.argv) > 0:
+    if len(sys.argv) > 1:
         chdir(sys.argv[1])
     logging.basicConfig(level=logging.INFO,
                         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
