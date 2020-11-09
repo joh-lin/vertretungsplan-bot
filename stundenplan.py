@@ -54,8 +54,6 @@ class Stundenplan:
             name = [name, 0]
         page = Stundenplan.download_page(name)
         soup = BeautifulSoup(page, "html.parser")
-        with open("test/test.html", "wb+") as f:
-            f.write(page)
 
         if "Keine Objekte gefunden" in str(page) or "Zu viele" in str(page):  # invalid name
             print("keine objekte gefunden")
