@@ -351,7 +351,7 @@ def main():
 
 if __name__ == "__main__":
     if len(sys.argv) > 0:
-        chdir(sys.argv[0])
+        chdir(sys.argv[1])
     logging.basicConfig(level=logging.INFO,
                         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     add_admin_log("Starting bot...")
