@@ -26,8 +26,8 @@ def send_plan(userid: str, chat: Chat, new_plan=True, message: Message = None, d
     logging.debug("/send_plan")
     if date.weekday() == 5:
         date += timedelta(days=2)
-    elif data.weekday() == 6:
-    	date += timedelta(days=1)
+    elif date.weekday() == 6:
+        date += timedelta(days=1)
 
     def date_to_name(_date):
         return ("Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag")[date.weekday()]
@@ -215,7 +215,7 @@ def button(update: Update, context: CallbackContext):
         save_userdata(userdata)
         add_admin_log(f"Name for {userid} set to '{name}'.")
         update.effective_chat.send_message(f"Dein Name wurde als \"{name[0]}\" gespeichert.\n"
-                                  f"Du kannst ihn jederzeit mit /name ändern.")
+                                           f"Du kannst ihn jederzeit mit /name ändern.")
         send_plan(userid, update.effective_chat, new_plan=True)
 
 
@@ -340,7 +340,7 @@ def main():
     dispatcher.add_handler(MessageHandler(Filters.text & (~Filters.command), message_update))
     dispatcher.add_handler(CallbackQueryHandler(button))
 
-    update_job = job_queue.run_repeating(check_for_updates, 5*60)
+    update_job = job_queue.run_repeating(check_for_updates, 5 * 60)
 
     updater.start_polling()
     add_admin_log("Bot has been started.")

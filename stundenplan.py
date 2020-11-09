@@ -44,7 +44,6 @@ class Stundenplan:
             post = session.post("https://selbstlernportal.de/html/planinfo/planinfo_start.php?ug=lev-llg",
                                 data=search_payload)
             if name[1] != 0:
-                print("two name download---")
                 post = session.get(f"https://selbstlernportal.de/html/planinfo/planinfo_start.php?ug=lev-llg&wochewahl=A&dbidx={name[1]}",)
         return post.content
 
@@ -54,8 +53,6 @@ class Stundenplan:
             name = [name, 0]
         page = Stundenplan.download_page(name)
         soup = BeautifulSoup(page, "html.parser")
-        with open("test/test.html", "wb+") as f:
-            f.write(page)
 
         if "Keine Objekte gefunden" in str(page) or "Zu viele" in str(page):  # invalid name
             print("keine objekte gefunden")
