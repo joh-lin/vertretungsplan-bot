@@ -9,6 +9,7 @@ token
 
 # Userdata files
 userdata.json
+plaene/
 
 # Pycache
 __pycache__
