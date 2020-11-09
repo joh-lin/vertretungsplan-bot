@@ -8,6 +8,8 @@ from stundenplan import Stundenplan
 from vertretungsplan import Vertretungsplan
 import logging
 from os import chdir
+import sys
+
 
 ARROW_LEFT = emojize(":arrow_backward:", use_aliases=True)
 ARROW_RIGHT = emojize(":arrow_forward:", use_aliases=True)
@@ -22,20 +24,12 @@ def plan(update: Update, context: CallbackContext):
     send_plan(update.message.from_user.id, update.effective_chat, new_plan=True)
 
 
-<<<<<<< HEAD
-def send_plan(username, chat: Chat, new_plan=True, message: Message = None, date: datetime = datetime.today()):
-    if date.weekday() == 5:
-        date += timedelta(days=2)
-    elif date.weekday() == 6:
-    	 date += timedelta(days=1)
-=======
 def send_plan(userid: str, chat: Chat, new_plan=True, message: Message = None, date: datetime = datetime.today()):
     logging.debug("/send_plan")
     if date.weekday() == 5:
         date += timedelta(days=2)
     elif date.weekday() == 6:
         date += timedelta(days=1)
->>>>>>> 4b75172950e5feed8423247ed535f1ec2e6da681
 
     def date_to_name(_date):
         return ("Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag")[date.weekday()]
@@ -356,7 +350,8 @@ def main():
 
 
 if __name__ == "__main__":
-    chdir("/home/pi/vertretungsplan-bot/")
+    if len(sys.argv) > 0:
+        chdir(sys.argv[0])
     logging.basicConfig(level=logging.INFO,
                         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     add_admin_log("Starting bot...")
