@@ -24,8 +24,10 @@ def plan(update: Update, context: CallbackContext):
 
 def send_plan(userid: str, chat: Chat, new_plan=True, message: Message = None, date: datetime = datetime.today()):
     logging.debug("/send_plan")
-    if date.weekday() > 4:
+    if date.weekday() == 5:
         date += timedelta(days=2)
+    elif data.weekday() == 6:
+    	date += timedelta(days=1)
 
     def date_to_name(_date):
         return ("Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag")[date.weekday()]
