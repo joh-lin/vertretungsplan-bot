@@ -10,7 +10,6 @@ import logging
 from os import chdir
 import sys
 
-
 ARROW_LEFT = emojize(":arrow_backward:", use_aliases=True)
 ARROW_RIGHT = emojize(":arrow_forward:", use_aliases=True)
 EMOJI_NEW = emojize(":new:", use_aliases=True)
@@ -21,7 +20,7 @@ ADMINS = ["641346534"]
 
 def plan(update: Update, context: CallbackContext):
     logging.debug("/plan")
-    send_plan(update.message.from_user.id, update.effective_chat, new_plan=True)
+    send_plan(str(update.message.from_user.id), update.effective_chat, new_plan=True)
 
 
 def send_plan(userid: str, chat: Chat, new_plan=True, message: Message = None, date: datetime = datetime.today()):
@@ -62,11 +61,15 @@ def send_plan(userid: str, chat: Chat, new_plan=True, message: Message = None, d
         msg += "```"
         return msg
 
-    name = load_userdata()[userid][0]
-    if name == "":
-        message.reply_text("Bitte gib mir die Login-Daten für deinen Stundenplan. (Nachname)",
-                           reply_markup=ForceReply())
+    userdata = load_userdata()
+    if userid not in userdata or userdata[userid][0] == "":
+        userdata[userid] = ["", chat.id]
+        save_userdata(userdata)
+        chat.send_message("Bitte gib mir die Login-Daten für deinen Stundenplan. (Nachname)",
+                          reply_markup=ForceReply())
         return
+
+    name = userdata[userid][0]
 
     splan = Stundenplan(name)
     vplan = Vertretungsplan().get_filtered(splan)
@@ -103,7 +106,7 @@ def start(update: Update, context: CallbackContext):
     userid = str(update.effective_user.id)
     if userid in userdata:
         if update.effective_chat.username:
-            userdata[userid][1] = update.effective_chat.username
+            userdata[userid][1] = update.effective_chat.id
             print("userdata[userid][1]")
         else:
             userdata[userid][1] = None
@@ -113,6 +116,16 @@ def start(update: Update, context: CallbackContext):
         userdata[userid] = ["", update.effective_chat.id]
     save_userdata(userdata)
     change_name(update, context)
+
+
+def stop(update: Update, context: CallbackContext):
+    logging.debug("/start")
+    userid = str(update.effective_user.id)
+    userdata = load_userdata()
+    if userid in userdata:
+        add_admin_log(f"User {userid} stopped getting Updates")
+        userdata[userid][0] = ""
+    update.message.reply_text("Du bekommst nun keinen Vertretungsplan-Nachrichten mehr von mir.")
 
 
 def change_name(update: Update, context: CallbackContext):
@@ -316,7 +329,18 @@ def check_for_updates(context: CallbackContext):
             # check substitution plan
             vplan_old_filtered = vplan_old.get_filtered(splan)
             vplan_new_filtered = vplan_new.get_filtered(splan)
-            if vplan_old_filtered != vplan_new_filtered:  # substitution plan changed
+
+            changed = False
+            for date in vplan_new_filtered:
+                dateobj = datetime.strptime(date, "%d-%m-%y").date()
+                if dateobj >= datetime.now().date():
+                    try:
+                        if vplan_new_filtered[date] != vplan_old_filtered[date]:
+                            changed = True
+                    except IndexError:
+                        pass
+
+            if changed:  # substitution plan changed
                 add_admin_log(f"Plan changed for user='{userid}', name='{userdata[userid][0]}' -> Sending plan.")
                 context.bot.send_message(userid, "Dein Vertretungsplan hat sich geändert.")
                 send_plan(userid, context.bot.get_chat(userdata[userid][1]), new_plan=True)
@@ -331,6 +355,7 @@ def main():
     job_queue = updater.job_queue
 
     dispatcher.add_handler(CommandHandler('start', start))
+    dispatcher.add_handler(CommandHandler('stop', stop))
     dispatcher.add_handler(CommandHandler('name', change_name))
     dispatcher.add_handler(CommandHandler('plan', plan))
     dispatcher.add_handler(CommandHandler('author', author))
