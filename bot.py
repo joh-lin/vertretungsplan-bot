@@ -65,7 +65,7 @@ def send_plan(userid: str, chat: Chat, new_plan=True, message: Message = None, d
     if userid not in userdata or userdata[userid][0] == "":
         userdata[userid] = ["", chat.id]
         save_userdata(userdata)
-        chat.send_message("Bitte gib mir die Login-Daten für deinen Stundenplan. (Nachname)",
+        chat.send_message("Bitte gib mir die Login-Daten für deinen Stundenplan (Nachname).",
                           reply_markup=ForceReply())
         return
 
@@ -125,7 +125,7 @@ def stop(update: Update, context: CallbackContext):
     if userid in userdata:
         add_admin_log(f"User {userid} stopped getting Updates")
         userdata[userid][0] = ""
-    update.message.reply_text("Du bekommst nun keinen Vertretungsplan-Nachrichten mehr von mir.")
+    update.message.reply_text("Du bekommst nun keine Vertretungsplan-Nachrichten mehr von mir.")
 
 
 def change_name(update: Update, context: CallbackContext):
@@ -144,7 +144,7 @@ def change_name(update: Update, context: CallbackContext):
         userdata[userid] = ["", update.effective_chat.id]
         update.message.reply_text(f"Du hast mir noch keine Login-Daten angegeben.")
         save_userdata(userdata)
-        update.message.reply_text("Bitte gib mir die Login-Daten für deinen Stundenplan. (Nachname)",
+        update.message.reply_text("Bitte gib mir die Login-Daten für deinen Stundenplan (Nachname).",
                                   reply_markup=ForceReply())
 
 
@@ -166,11 +166,11 @@ def message_update(update: Update, context: CallbackContext):
         check, check_dbidx = Stundenplan.check_name(name)
         if not valid:
             update.message.reply_text(f"Der Name darf nur Buchstaben und Zahlen von 0 bis 9 enthalten.")
-            update.message.reply_text("Bitte gib mir die Login-Daten für deinen Stundenplan. (Nachname)",
+            update.message.reply_text("Bitte gib mir die Login-Daten für deinen Stundenplan (Nachname).",
                                       reply_markup=ForceReply())
         elif not check:
             update.message.reply_text(f"Der Name {name} ist nicht gültig.")
-            update.message.reply_text("Bitte gib mir die Login-Daten für deinen Stundenplan. (Nachname)",
+            update.message.reply_text("Bitte gib mir die Login-Daten für deinen Stundenplan (Nachname).",
                                       reply_markup=ForceReply())
 
         elif len(check) > 1:
@@ -185,8 +185,8 @@ def message_update(update: Update, context: CallbackContext):
             userdata[userid][0] = [name, 0]
             save_userdata(userdata)
             add_admin_log(f"Name for {userid} set to '{[name, 0]}'.")
-            update.message.reply_text(f"Dein Name wurde als \"{name}\" gespeichert.\n"
-                                      f"Du kannst ihn jederzeit mit /name ändern.")
+            update.message.reply_text(f"Dein Login wurde als \"{name}\" gespeichert.\n"
+                                      f"Du kannst ihn jederzeit mit /login ändern.")
             send_plan(userid, update.effective_chat, new_plan=True)
         else:
             raise ValueError(f"Name {name} was not handled check={check}")
@@ -214,7 +214,7 @@ def button(update: Update, context: CallbackContext):
     if query.data == "change_login":
         userdata[userid][0] = ""
         save_userdata(userdata)
-        query.message.reply_text("Bitte gib mir die Login-Daten für deinen Stundenplan. (Nachname)",
+        query.message.reply_text("Bitte gib mir die Login-Daten für deinen Stundenplan (Nachname).",
                                  reply_markup=ForceReply())
     elif query.data[:4] == "plan":
         if len(query.data) == 4:  # new plan
@@ -230,7 +230,7 @@ def button(update: Update, context: CallbackContext):
         save_userdata(userdata)
         add_admin_log(f"Name for {userid} set to '{name}'.")
         update.effective_chat.send_message(f"Dein Name wurde als \"{name[0]}\" gespeichert.\n"
-                                           f"Du kannst ihn jederzeit mit /name ändern.")
+                                           f"Du kannst ihn jederzeit mit /login ändern.")
         send_plan(userid, update.effective_chat, new_plan=True)
 
 
@@ -240,6 +240,12 @@ def author(update: Update, context: CallbackContext):
                               "Email: johannes\.lingk@gmail\.com",
                               reply_markup=ReplyKeyboardRemove(),
                               parse_mode=ParseMode.MARKDOWN_V2)
+
+
+def help_message(update: Update, context: CallbackContext):
+    text = """*So benutzt du den Bot:*
+        """
+    update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN_V2)
 
 
 def add_admin_log(*msg):
@@ -356,7 +362,8 @@ def main():
 
     dispatcher.add_handler(CommandHandler('start', start))
     dispatcher.add_handler(CommandHandler('stop', stop))
-    dispatcher.add_handler(CommandHandler('name', change_name))
+    dispatcher.add_handler(CommandHandler('help', help_message))
+    dispatcher.add_handler(CommandHandler('login', change_name))
     dispatcher.add_handler(CommandHandler('plan', plan))
     dispatcher.add_handler(CommandHandler('author', author))
     dispatcher.add_handler(CommandHandler('admin_help', admin_help))
