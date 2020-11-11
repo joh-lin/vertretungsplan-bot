@@ -60,8 +60,8 @@ def send_plan(userid: str, chat: Chat, new_plan=True, message: Message = None, d
                                 something_changed = True
                             if not something_changed:
                                 subst_msg += f"{entry['type']} "
-                        if len(subst_msg > 10):
-                            subst_msg = "\n    " + subst_msg
+                        if len(subst_msg) > 10:
+                            subst_msg = "\n           " + subst_msg
                         msg += subst_msg
                         break
             else:
