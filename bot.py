@@ -243,8 +243,14 @@ def author(update: Update, context: CallbackContext):
 
 
 def help_message(update: Update, context: CallbackContext):
-    text = """*So benutzt du den Bot:*
-        """
+    text = """
+*So benutzt du den Bot:*
+*/help* \- Zeigt diese Hilfe\-Nachricht an\.
+*/start* \- Bekomme regelmäßig die neuesten Vertretungsplan Infos\.
+*/stop* \- Bekomme keine Vertretungsplan Infos mehr\.
+*/login* \- Ändere deine Login\-Daten\.
+*/plan* \- Lass dir einen neuen Plan senden\.
+"""
     update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN_V2)
 
 
@@ -341,8 +347,11 @@ def check_for_updates(context: CallbackContext):
                 dateobj = datetime.strptime(date, "%d-%m-%y").date()
                 if dateobj >= datetime.now().date():
                     try:
-                        if vplan_new_filtered[date] != vplan_old_filtered[date]:
+                        if date not in vplan_old_filtered:
                             changed = True
+                        else:
+                            if vplan_new_filtered[date] != vplan_old_filtered[date]:
+                                changed = True
                     except IndexError:
                         pass
 
