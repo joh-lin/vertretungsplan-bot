@@ -47,19 +47,22 @@ def send_plan(userid: str, chat: Chat, new_plan=True, message: Message = None, d
                 # possible types: Vertr. | Verlegung | Raum | Vtr. | enfälllt | EVA | Betreuung | Unterricht geändert | Trotz Absenz
                 for entry in _substitution:
                     if entry["subject"] == day[row].split(" ")[1]:  # if substitution matches a subject
+                        subst_msg = "-> "
                         if entry["type"] == "entfälllt":
-                            msg += f"-> Entfall"
+                            subst_msg += f"Entfall"
                         else:
                             something_changed = False  # append type of entry to message (to prevent empty arrows ->   )
-                            msg += f"-> "
                             if entry["teacher"] != day[row].split(" ")[2]:
-                                msg += f"{entry['teacher']} "
+                                subst_msg += f"{entry['teacher']} "
                                 something_changed = True
                             if entry["room"] != day[row].split(" ")[3]:
-                                msg += f"{entry['room']} "
+                                subst_msg += f"{entry['room']} "
                                 something_changed = True
                             if not something_changed:
-                                msg += f"{entry['type']} "
+                                subst_msg += f"{entry['type']} "
+                        if len(subst_msg > 10):
+                            subst_msg = "\n    " + subst_msg
+                        msg += subst_msg
                         break
             else:
                 msg += f'\n{row + 1}'
