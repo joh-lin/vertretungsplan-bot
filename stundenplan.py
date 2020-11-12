@@ -2,6 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import datetime as dtime
 import json
+from custom_exceptions import InvalidNameError
 
 
 class Stundenplan:
@@ -45,14 +46,16 @@ class Stundenplan:
             post = session.post("https://selbstlernportal.de/html/planinfo/planinfo_start.php?ug=lev-llg",
                                 data=search_payload)
             if name[1] != 0:
-                post = session.get(f"https://selbstlernportal.de/html/planinfo/planinfo_start.php?ug=lev-llg&wochewahl=A&dbidx={name[1]}",)
+                post = session.get(
+                    f"https://selbstlernportal.de/html/planinfo/planinfo_start.php?ug=lev-llg&wochewahl=A&dbidx={name[1]}", )
         return post.content
 
     @staticmethod
-    def check_name(name):
+    def check_name(name, page=None):
         if type(name) is str:
             name = [name, 0]
-        page = Stundenplan.download_page(name)
+        if page is None:
+            page = Stundenplan.download_page(name)
         soup = BeautifulSoup(page, "html.parser")
 
         if "Keine Objekte gefunden" in str(page) or "Zu viele" in str(page):  # invalid name
@@ -72,6 +75,10 @@ class Stundenplan:
     def update(self):
         plan = {}
         html = self.download_page(self.name)
+        if self.check_name(self.name, html) == ([], []):
+            raise InvalidNameError(f"Name {self.name} not valid.")
+        with open("test.html", "wb+") as f:
+            f.write(html)
 
         # extract table
         data_a = []
@@ -131,7 +138,7 @@ class Stundenplan:
 
 
 if __name__ == "__main__":
-	print("Stundenplan.py:")
-	names, values = Stundenplan.check_name(["gruber", 1295])
-	print(names)
-	print(values)
+    print("Stundenplan.py:")
+    names, values = Stundenplan.check_name(["gruber", 1295])
+    print(names)
+    print(values)

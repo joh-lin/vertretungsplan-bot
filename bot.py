@@ -9,6 +9,7 @@ from vertretungsplan import Vertretungsplan
 import logging
 from os import chdir
 import sys
+from custom_exceptions import InvalidNameError
 
 ARROW_LEFT = emojize(":arrow_backward:", use_aliases=True)
 ARROW_RIGHT = emojize(":arrow_forward:", use_aliases=True)
@@ -45,7 +46,8 @@ def send_plan(userid: str, chat: Chat, new_plan=True, message: Message = None, d
                 msg += f'\n{row + 1}  '
                 msg += f"{day[row].split(' ')[1].rjust(7)} "
                 msg += f"{day[row].split(' ')[2].ljust(4)} "
-                msg += f"{day[row].split(' ')[3]} "
+                if len(day[row].split(' ')) > 3:
+                    msg += f"{day[row].split(' ')[3]} "
 
                 # add substitution plan infos
                 # possible types: Vertr. | Verlegung | Raum | Vtr. | enfälllt | EVA | Betreuung | Unterricht geändert | Trotz Absenz
@@ -366,7 +368,10 @@ def check_for_updates(context: CallbackContext):
     for userid in userdata:  # check for every user
         if userdata[userid][0] != "":  # if user has a name
             splan = Stundenplan(userdata[userid][0])
-            splan.update()
+            try:
+                splan.update()
+            except InvalidNameError as e:
+                add_admin_log(str(e))
             splan.save_to_file()
             # check substitution plan
             vplan_old_filtered = vplan_old.get_filtered(splan)
