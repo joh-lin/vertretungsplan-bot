@@ -17,6 +17,7 @@ class Stundenplan:
             self.save_to_file()
 
     def load_from_file(self):
+        print("Stundenplan: loading from file.")
         with open("plaene/" + self.name[0] + str(self.name[1]) + ".json", "r") as f:
             self.plan = json.loads(f.read())
 

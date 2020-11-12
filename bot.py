@@ -23,7 +23,7 @@ def plan(update: Update, context: CallbackContext):
     send_plan(str(update.message.from_user.id), update.effective_chat, new_plan=True)
 
 
-def send_plan(userid: str, chat: Chat, new_plan=True, message: Message = None, date: None):
+def send_plan(userid: str, chat: Chat, new_plan=True, message: Message = None, date = None):
     if not date:
         date = datetime.today()
     logging.debug("/send_plan")
@@ -334,6 +334,10 @@ def debug_check_name(update: Update, context: CallbackContext):
             update.message.reply_text("\n".join(valid))
 
 
+def debug_get_date(update: Update, context: CallbackContext):
+    update.message.reply_text(str(datetime.now()))
+
+
 def check_for_updates(context: CallbackContext):
     # update substitution plan
     vplan_old = Vertretungsplan()
@@ -390,6 +394,7 @@ def main():
     dispatcher.add_handler(CommandHandler('admin_get_users', admin_get_users))
     dispatcher.add_handler(CommandHandler('admin_log', admin_send_log))
     dispatcher.add_handler(CommandHandler('debug_check_name', debug_check_name))
+    dispatcher.add_handler(CommandHandler('debug_date', debug_get_date))
     dispatcher.add_handler(MessageHandler(Filters.text & (~Filters.command), message_update))
     dispatcher.add_handler(CallbackQueryHandler(button))
 
