@@ -131,6 +131,7 @@ class Stundenplan:
 
 
 if __name__ == "__main__":
-    names, values = Stundenplan.check_name(["gruber", 1295])
-    print(names)
-    print(values)
+	print("Stundenplan.py:")
+	names, values = Stundenplan.check_name(["gruber", 1295])
+	print(names)
+	print(values)

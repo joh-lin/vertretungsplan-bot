@@ -35,9 +35,11 @@ def send_plan(userid: str, chat: Chat, new_plan=True, message: Message = None, d
     def date_to_name(_date):
         return ("Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag")[date.weekday()]
 
-    def construct_message(day, _substitution, _date):
+    def construct_message(day, _substitution, _date, _infos):
         msg = "```"
         msg += f'  {date_to_name(_date).ljust(10)}  {_date.strftime("%d-%m-%y")}'
+
+        # plan
         for row in range(len(day)):  # for every lesson
             if day[row] != "---":  # if day not empty
                 msg += f'\n{row + 1}  '
@@ -68,6 +70,13 @@ def send_plan(userid: str, chat: Chat, new_plan=True, message: Message = None, d
                         break
             else:
                 msg += f'\n{row + 1}'
+
+        # info
+        msg += "\n"
+        for info in _infos:
+            if info[0] not in ["Abwesende Lehrer", "Blockierte Räume", "Betroffene Klassen"]:
+                msg += "\n" + " - ".join(info)
+
         msg += "```"
         return msg
 
@@ -82,13 +91,19 @@ def send_plan(userid: str, chat: Chat, new_plan=True, message: Message = None, d
     name = userdata[userid][0]
 
     splan = Stundenplan(name)
-    vplan = Vertretungsplan().get_filtered(splan)
+    vplan_obj = Vertretungsplan()
+    vplan = vplan_obj.get_filtered(splan)
     if date.strftime("%d-%m-%y") in vplan:  # get only substitution info for that date
         substitution = vplan[date.strftime("%d-%m-%y")]
     else:  # empty list if none
         substitution = []
 
-    new_message = construct_message(splan.get_day(date), substitution, date)
+    if date.strftime("%d-%m-%y") in vplan_obj.infos:  # get only substitution info for that date
+        infos = vplan_obj.infos[date.strftime("%d-%m-%y")]
+    else:  # empty list if none
+        infos = []
+
+    new_message = construct_message(splan.get_day(date), substitution, date, infos)
 
     # inline keyboard date already contains date for previous and next plans
     next_date = (date + timedelta(days=1))

@@ -56,20 +56,25 @@ def get_timetable():
     if not final:
         raise Exception("Timetable data could not be found")
     output = []
+    infos = {}
     for entry in final:
         if entry.endswith(".htm") and not entry.endswith(".html") and not entry.endswith("news.htm"):
-            output.append(fetch_timetable(entry))
+            substitution, infos = fetch_timetable(entry)
+            output.append(substitution)
     if len(output) == 1:
-        return output[0]
+        return output[0], infos
     else:
-        return output
+        return output, infos
 
 
 def fetch_timetable(timetableurl):
     results = []
+    infodata = {}
     sauce = requests.get(timetableurl).text
     soupi = bs4.BeautifulSoup(sauce, "html.parser")
     ind = -1
+
+    # substitution data
     for soup in soupi.find_all('table', {'class': 'mon_list'}):
         ind += 1
         updates = [o.p.findAll('span')[-1].next_sibling.split("Stand: ")[1] for o in
@@ -95,12 +100,28 @@ def fetch_timetable(timetableurl):
                              "date": date.rjust(10, "0").replace('.', '-')[:-2],
                              "day": day}
                 results.append(new_entry)
-    return results
+
+    # infos
+    ind = -1
+    for soup in soupi.find_all('table', {'class': 'info'}):
+        ind += 1
+        titles = [o.text for o in soupi.findAll('div', {'class': 'mon_title'})][ind]
+        date = titles.split(" ")[0]
+        date = date.rjust(10, "0").replace('.', '-')[:-2]
+        infodata[date] = []
+        for tr in soup.find_all('tr')[1:]:
+            e = []
+            for td in tr.find_all('td'):
+                e.append(td.text.replace("\xa0", ""))
+            infodata[date].append(e)
+
+    return results, infodata
 
 
 class Vertretungsplan:
     def __init__(self):
         self.plan = {}
+        self.infos = {}
         try:
             self.load_from_file()
         except FileNotFoundError:
@@ -110,20 +131,26 @@ class Vertretungsplan:
     def load_from_file(self):
         with open("plaene/vertretungsplan.json", "r") as f:
             self.plan = json.loads(f.read())
+        with open("plaene/vertretungsplaninfos.json", "r") as f:
+            self.infos = json.loads(f.read())
 
     def save_to_file(self):
         with open("plaene/vertretungsplan.json", "w+") as f:
             f.write(json.dumps(self.plan))
+        with open("plaene/vertretungsplaninfos.json", "w+") as f:
+            f.write(json.dumps(self.infos))
 
     def update(self):
+        timetable, infos = get_timetable()
+        self.infos = infos
         self.plan = {}
-        for entry in get_timetable():
+        for entry in timetable:
             date = entry["date"]
             if date not in self.plan:
                 self.plan[date] = []
             self.plan[date].append(entry)
 
-        return self.plan
+        #return self.plan
 
     def get_filtered(self, stundenplan: Stundenplan):
         """
@@ -141,7 +168,7 @@ class Vertretungsplan:
         return ef
 
     def print(self):
-        plan = self.get_filtered(Stundenplan("lingk"))
+        plan = self.get_filtered(Stundenplan(["lingk", 0]))
         for date in plan:
             print(date)
             for e in plan[date]:
@@ -150,4 +177,9 @@ class Vertretungsplan:
 
 if __name__ == "__main__":
     vplan = Vertretungsplan()
-    vplan.print()
+    vplan.update()
+    vplan.save_to_file()
+    for date in vplan.infos:
+        print(date)
+        for e in vplan.infos[date]:
+            print("    " + str(e))
