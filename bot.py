@@ -23,7 +23,9 @@ def plan(update: Update, context: CallbackContext):
     send_plan(str(update.message.from_user.id), update.effective_chat, new_plan=True)
 
 
-def send_plan(userid: str, chat: Chat, new_plan=True, message: Message = None, date: datetime = datetime.today()):
+def send_plan(userid: str, chat: Chat, new_plan=True, message: Message = None, date: None):
+    if not date:
+        date = datetime.today()
     logging.debug("/send_plan")
     if date.weekday() == 5:
         date += timedelta(days=2)
