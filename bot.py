@@ -170,15 +170,16 @@ def message_update(update: Update, context: CallbackContext):
         if not 1 < len(name) < 20:
             valid = False
         for char in name:
-            if char not in "abcdefghijklmnopqrstuvwxyz1234567890öäü":
+            if char not in "abcdefghijklmnopqrstuvwxyzöäü":
                 valid = False
 
-        check, check_dbidx = Stundenplan.check_name(name)
         if not valid:
-            update.message.reply_text(f"Der Name darf nur Buchstaben und Zahlen von 0 bis 9 enthalten.")
+            update.message.reply_text(f"Der Name darf nur Buchstaben enthalten.")
             update.message.reply_text("Bitte gib mir die Login-Daten für deinen Stundenplan (Nachname).",
                                       reply_markup=ForceReply())
-        elif not check:
+            return
+        check, check_dbidx = Stundenplan.check_name(name)
+        if not check:
             update.message.reply_text(f"Der Name {name} ist nicht gültig.")
             update.message.reply_text("Bitte gib mir die Login-Daten für deinen Stundenplan (Nachname).",
                                       reply_markup=ForceReply())
