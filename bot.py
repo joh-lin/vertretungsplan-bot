@@ -182,6 +182,10 @@ def message_update(update: Update, context: CallbackContext):
     add_admin_log(f"Received message from {userid}: \"{update.message.text}\"")
     if userid in userdata:
         text = update.message.text.strip()
+        notes = get_notes()
+        if userid not in notes:
+            notes[userid] = []
+            set_notes(notes)
         if text[0] == ".":
             notes = get_notes()[userid]
             if not notes:
