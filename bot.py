@@ -24,7 +24,7 @@ def plan(update: Update, context: CallbackContext):
     send_plan(str(update.message.from_user.id), update.effective_chat, new_plan=True)
 
 
-def send_plan(userid: str, chat: Chat, new_plan=True, message: Message = None, date = None):
+def send_plan(userid: str, chat: Chat, new_plan=True, message: Message = None, date=None):
     if not date:
         date = datetime.today()
     logging.debug("/send_plan")
@@ -180,44 +180,83 @@ def message_update(update: Update, context: CallbackContext):
     userdata = load_userdata()
     userid = str(update.effective_user.id)
     add_admin_log(f"Received message from {userid}: \"{update.message.text}\"")
-    if userid in userdata and userdata[userid][0] == "":
-        name = update.message.text.split(" ")[0].lower()
-        # check if valid
-        valid = True
-        if not 1 < len(name) < 20:
-            valid = False
-        for char in name:
-            if char not in "abcdefghijklmnopqrstuvwxyzöäü":
+    if userid in userdata:
+        text = update.message.text.strip()
+        if text[0] == ".":
+            notes = get_notes()[userid]
+            if not notes:
+                update.message.reply_text("Keine Notizen gefunden.")
+            else:
+                reply = "\n".join([f"({i+1})  {notes[i]}" for i in range(len(notes))])
+                update.message.reply_text(reply)
+        elif text[0] == "+":
+            note = text[1:].strip().replace("\n", " ")
+            notes = get_notes()
+            notes[userid].append(note)
+            set_notes(notes)
+            update.message.reply_text("Notiz hinzugefügt.")
+        elif text[:2] == "-a":
+            notes = get_notes()
+            notes[userid] = []
+            set_notes(notes)
+            update.message.reply_text("Alle Notizen gelöscht.")
+        elif text[0] == "-":
+            try:
+                notes = get_notes()
+                if not notes:
+                    update.message.reply_text("Keine Notizen gefunden.")
+                else:
+                    index = int(text[1:]) - 1
+                    if index < len(notes[userid]):
+                        n = notes[userid][index]
+                        del notes[userid][index]
+                        set_notes(notes)
+                        update.message.reply_text(f'Notiz "{n}" wurde gelöscht.')
+                    else:
+                        update.message.reply_text(f"Die Zahl {index+1} ist zu hoch.")
+            except IndexError:
+                update.message.reply_text(f"Fehler! Siehe /help für Hilfe.")
+            except ValueError:
+                update.message.reply_text("Fehler! Siehe /help für Hilfe.")
+        elif userdata[userid][0] == "":
+            name = update.message.text.split(" ")[0].lower()
+            # check if valid
+            valid = True
+            if not 1 < len(name) < 20:
                 valid = False
+            for char in name:
+                if char not in "abcdefghijklmnopqrstuvwxyzöäü":
+                    valid = False
 
-        if not valid:
-            update.message.reply_text(f"Der Name darf nur Buchstaben enthalten.")
-            update.message.reply_text("Bitte gib mir die Login-Daten für deinen Stundenplan (Nachname).",
-                                      reply_markup=ForceReply())
-            return
-        check, check_dbidx = Stundenplan.check_name(name)
-        if not check:
-            update.message.reply_text(f"Der Name {name} ist nicht gültig.")
-            update.message.reply_text("Bitte gib mir die Login-Daten für deinen Stundenplan (Nachname).",
-                                      reply_markup=ForceReply())
+            if not valid:
+                update.message.reply_text(f"Der Name darf nur Buchstaben enthalten.")
+                update.message.reply_text("Bitte gib mir die Login-Daten für deinen Stundenplan (Nachname).",
+                                          reply_markup=ForceReply())
+                return
+            check, check_dbidx = Stundenplan.check_name(name)
+            if not check:
+                update.message.reply_text(f"Der Name {name} ist nicht gültig.")
+                update.message.reply_text("Bitte gib mir die Login-Daten für deinen Stundenplan (Nachname).",
+                                          reply_markup=ForceReply())
 
-        elif len(check) > 1:
-            keyboard = []
-            for i in range(len(check)):
-                keyboard.append([InlineKeyboardButton(str(check[i]), callback_data=f"name {name} {check_dbidx[i]}")])
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            update.message.reply_text("Es wurden mehrere Einträge gefunden, bitte wähle.",
-                                      reply_markup=reply_markup)
+            elif len(check) > 1:
+                keyboard = []
+                for i in range(len(check)):
+                    keyboard.append(
+                        [InlineKeyboardButton(str(check[i]), callback_data=f"name {name} {check_dbidx[i]}")])
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                update.message.reply_text("Es wurden mehrere Einträge gefunden, bitte wähle.",
+                                          reply_markup=reply_markup)
 
-        elif check == [name]:
-            userdata[userid][0] = [name, 0]
-            save_userdata(userdata)
-            add_admin_log(f"Name for {userid} set to '{[name, 0]}'.")
-            update.message.reply_text(f"Dein Login wurde als \"{name}\" gespeichert.\n"
-                                      f"Du kannst ihn jederzeit mit /login ändern.")
-            send_plan(userid, update.effective_chat, new_plan=True)
-        else:
-            raise ValueError(f"Name {name} was not handled check={check}")
+            elif check == [name]:
+                userdata[userid][0] = [name, 0]
+                save_userdata(userdata)
+                add_admin_log(f"Name for {userid} set to '{[name, 0]}'.")
+                update.message.reply_text(f"Dein Login wurde als \"{name}\" gespeichert.\n"
+                                          f"Du kannst ihn jederzeit mit /login ändern.")
+                send_plan(userid, update.effective_chat, new_plan=True)
+            else:
+                raise ValueError(f"Name {name} was not handled check={check}")
 
 
 def save_userdata(data):
@@ -229,6 +268,17 @@ def load_userdata():
     with open("userdata.json", "r") as f:
         text = f.read()
         return json.loads(text)
+
+
+def get_notes():
+    with open('notes.json', "r") as f:
+        notes = json.loads(f.read())
+        return notes
+
+
+def set_notes(notes):
+    with open('notes.json', "w") as f:
+        f.write(json.dumps(notes))
 
 
 def button(update: Update, context: CallbackContext):

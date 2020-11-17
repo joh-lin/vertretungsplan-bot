@@ -8,6 +8,7 @@ admin.log
 token
 
 # Userdata files
+notes.json
 userdata.json
 plaene/
 
