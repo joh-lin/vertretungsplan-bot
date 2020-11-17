@@ -328,6 +328,11 @@ def help_message(update: Update, context: CallbackContext):
 */stop* \- Bekomme keine Vertretungsplan Infos mehr\.
 */login* \- Ändere deine Login\-Daten\.
 */plan* \- Lass dir einen neuen Plan senden\.
+
+*So machst du dir Notizen:*
+*\+ \[notiz\]* \- Füge eine Notiz hinzu\.
+*\- \[nummer\]* \- Lösche die Notiz mit der angegebenen Nummer\.
+*\.*   \- Zeige deine Notizen an\.
 """
     update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN_V2)
 
