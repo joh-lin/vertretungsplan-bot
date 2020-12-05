@@ -6,6 +6,7 @@ from emoji import emojize
 from datetime import timedelta, datetime
 from stundenplan import Stundenplan
 from vertretungsplan import Vertretungsplan
+from klausurplan import Klausurplan
 import logging
 from os import chdir
 import sys
@@ -21,10 +22,41 @@ ADMINS = ["641346534"]
 
 def plan(update: Update, context: CallbackContext):
     logging.debug("/plan")
-    send_plan(str(update.message.from_user.id), update.effective_chat, new_plan=True)
+    if len(context.args) == 0:
+        send_plan(str(update.message.from_user.id), update.effective_chat, new_plan=True)
+    else:
+        name = context.args[0]
+        valid = True
+        if not 1 < len(name) < 20:
+            valid = False
+        for char in name:
+            if char not in "abcdefghijklmnopqrstuvwxyzöäü":
+                valid = False
+
+        if not valid:
+            update.message.reply_text(f"Der Name darf nur Buchstaben enthalten.")
+            update.message.reply_text("Bitte gib mir die Login-Daten für deinen Stundenplan (Nachname).",
+                                      reply_markup=ForceReply())
+            return
+        check, check_dbidx = Stundenplan.check_name(name)
+        if not check:
+            update.message.reply_text(f"Der Name {name} ist nicht gültig.")
+            update.message.reply_text("Bitte gib mir die Login-Daten für deinen Stundenplan (Nachname).",
+                                      reply_markup=ForceReply())
+
+        elif len(check) > 1:
+            keyboard = []
+            for i in range(len(check)):
+                keyboard.append(
+                    [InlineKeyboardButton(str(check[i]), callback_data=f"quickplan {name} {check_dbidx[i]}")])
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            update.message.reply_text("Es wurden mehrere Einträge gefunden, bitte wähle.",
+                                      reply_markup=reply_markup)
+        else:
+            send_plan(str(update.message.from_user.id), update.effective_chat, new_plan=True, custom_name=[name, 0])
 
 
-def send_plan(userid: str, chat: Chat, new_plan=True, message: Message = None, date=None):
+def send_plan(userid: str, chat: Chat, new_plan=True, message: Message = None, date=None, custom_name=None):
     if not date:
         date = datetime.today()
     logging.debug("/send_plan")
@@ -37,8 +69,13 @@ def send_plan(userid: str, chat: Chat, new_plan=True, message: Message = None, d
         return ("Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag")[date.weekday()]
 
     def construct_message(day, _substitution, _date, _infos):
+
+        week = "B"
+        if _date.isocalendar()[1] % 2 == 0:  # even = A
+            week = "A"
+
         msg = "```"
-        msg += f'  {date_to_name(_date).ljust(10)}  {_date.strftime("%d-%m-%y")}'
+        msg += f' {week}  {date_to_name(_date).ljust(7)}  {_date.strftime("%d-%m-%y")}'
 
         # plan
         for row in range(len(day)):  # for every lesson
@@ -82,15 +119,18 @@ def send_plan(userid: str, chat: Chat, new_plan=True, message: Message = None, d
         msg += "```"
         return msg
 
-    userdata = load_userdata()
-    if userid not in userdata or userdata[userid][0] == "":
-        userdata[userid] = ["", chat.id]
-        save_userdata(userdata)
-        chat.send_message("Bitte gib mir die Login-Daten für deinen Stundenplan (Nachname).",
-                          reply_markup=ForceReply())
-        return
+    if custom_name:
+        name = custom_name
+    else:
+        userdata = load_userdata()
+        if userid not in userdata or userdata[userid][0] == "":
+            userdata[userid] = ["", chat.id]
+            save_userdata(userdata)
+            chat.send_message("Bitte gib mir die Login-Daten für deinen Stundenplan (Nachname).",
+                              reply_markup=ForceReply())
+            return
 
-    name = userdata[userid][0]
+        name = userdata[userid][0]
 
     splan = Stundenplan(name)
     vplan_obj = Vertretungsplan()
@@ -125,6 +165,29 @@ def send_plan(userid: str, chat: Chat, new_plan=True, message: Message = None, d
     else:
         message.edit_text(new_message, reply_markup=reply_markup, parse_mode=ParseMode.MARKDOWN_V2)
         add_admin_log(f"Sent plan to {userid}, date={date.strftime('%d-%m-%y')}.")
+
+
+def klausur(update: Update, context: CallbackContext):
+    logging.debug('/klausur')
+    msg = "```"
+    userid = str(update.effective_user.id)
+    userdata = load_userdata()
+    if userid not in userdata or userdata[userid][0] == "":
+        userdata[userid] = ["", update.effective_chat.id]
+        save_userdata(userdata)
+        update.effective_chat.send_message("Bitte gib mir die Login-Daten für deinen Stundenplan (Nachname).",
+                                           reply_markup=ForceReply())
+        return
+
+    name = userdata[userid][0]
+    kplan = Klausurplan()
+    splan = Stundenplan(name)
+    filtered = kplan.get_filtered(splan)
+    for date in filtered:
+        if datetime.strptime(date, "%d-%m-%y") > datetime.today():
+            msg += "\n" + f"{date} - {filtered[date]}"
+    msg += "```"
+    update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN_V2)
 
 
 def start(update: Update, context: CallbackContext):
@@ -191,7 +254,7 @@ def message_update(update: Update, context: CallbackContext):
             if not notes:
                 update.message.reply_text("Keine Notizen gefunden.")
             else:
-                reply = "\n".join([f"({i+1})  {notes[i]}" for i in range(len(notes))])
+                reply = "\n".join([f"({i + 1})  {notes[i]}" for i in range(len(notes))])
                 update.message.reply_text(reply)
         elif text[0] == "+":
             note = text[1:].strip().replace("\n", " ")
@@ -217,7 +280,7 @@ def message_update(update: Update, context: CallbackContext):
                         set_notes(notes)
                         update.message.reply_text(f'Notiz "{n}" wurde gelöscht.')
                     else:
-                        update.message.reply_text(f"Die Zahl {index+1} ist zu hoch.")
+                        update.message.reply_text(f"Die Zahl {index + 1} ist zu hoch.")
             except IndexError:
                 update.message.reply_text(f"Fehler! Siehe /help für Hilfe.")
             except ValueError:
@@ -305,6 +368,9 @@ def button(update: Update, context: CallbackContext):
             new_date = datetime.strptime(query.data.split(" ")[1], "%d-%m-%y")
             send_plan(str(query.from_user.id), query.message.chat, new_plan=False, message=query.message,
                       date=new_date)
+    elif query.data[:9] == "quickplan":
+        name = [query.data.split(" ")[1], "".join(query.data.split(" ")[2])]
+        send_plan(str(query.from_user.id), query.message.chat, new_plan=True, custom_name=name)
     elif query.data[:4] == "name":
         print(query.data)
         name = (query.data.split(" ")[1], "".join(query.data.split(" ")[2]))
@@ -416,6 +482,10 @@ def debug_get_date(update: Update, context: CallbackContext):
 
 
 def check_for_updates(context: CallbackContext):
+    kplan = Klausurplan()
+    kplan.update()
+    kplan.save_to_file()
+
     # update substitution plan
     vplan_old = Vertretungsplan()
     vplan_new = Vertretungsplan()
@@ -468,6 +538,7 @@ def main():
     dispatcher.add_handler(CommandHandler('help', help_message))
     dispatcher.add_handler(CommandHandler('login', change_name))
     dispatcher.add_handler(CommandHandler('plan', plan))
+    dispatcher.add_handler(CommandHandler('klausur', klausur))
     dispatcher.add_handler(CommandHandler('author', author))
     dispatcher.add_handler(CommandHandler('admin_help', admin_help))
     dispatcher.add_handler(CommandHandler('admin_update', admin_manual_update))
